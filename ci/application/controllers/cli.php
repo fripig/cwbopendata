@@ -34,10 +34,10 @@ class Cli extends CI_Controller {
         "029" => "雲林縣天氣小幫手",
         "030" => "連江縣天氣小幫手");
         foreach ($locationlist as $locationKey => $locationName) {
-            # code...
+
         
             $url = sprintf('http://opendata.cwb.gov.tw/opendata/MFC/F-C0032-%s.xml',$locationKey);
-            //echo $url;
+
             $xmlstring = file_get_contents($url);
             if($xmlstring == FALSE)
                 continue;
@@ -51,7 +51,7 @@ class Cli extends CI_Controller {
             $data["updated"] = (string) $xml->head->source->updated;
             $data["updated"] = date_create($data["updated"],timezone_open("Asia/Taipei") );
             $data["updated"] = date_format($data["updated"],"Y-m-d H:i:s");;
-            //echo $data["time"]."<br>";
+
             if(strpos($data["time"],"上午 "))
             {
                 $data["time"] = str_replace("上午 ", "", $data["time"]);
@@ -66,7 +66,7 @@ class Cli extends CI_Controller {
 
 
             $data["time"] = date_format($data["time"],"Y-m-d H:i:s");;
-                        //echo $data["time"]."<br>";
+
             $data["memo"] = array();
             foreach ($xml->data as  $rows) {
                 foreach ($rows as $key => $value) {
@@ -81,14 +81,13 @@ class Cli extends CI_Controller {
     }
     public function _get_one_data($table,$data_url)
     {
-        //php /home/fripig/public_html/api/weather/index.php cli get_36hour_data
+
         $url = 'http://opendata.cwb.gov.tw/opendata/'.$data_url;
         $xmlstring = file_get_contents($url);
         $xml = simplexml_load_string($xmlstring);
         if($xmlstring == FALSE)
                 return;
-        //$data_url = "MFC/F-C0032-001.xml";
-        //$updatetime = $xml->head->updated;
+
         $updatetime = date_create($xml->head->updated,timezone_open("Asia/Taipei") );
         $updatetime = date_format($updatetime,"Y-m-d H:i:s");;
         $check = $this->db->like("url",$data_url)
@@ -97,40 +96,32 @@ class Cli extends CI_Controller {
                             ->row_array();
         if($check)
         {
-            //if($updatetime!=$check["updatetime"])
                 $this->db->update("data_state",array("updatetime"=>$updatetime),array("url"=>$data_url));
-            //else
-                //return 0;
         }else
         {
             $this->db->insert("data_state",array("updatetime"=>$updatetime,"url"=>$data_url) );
         }
-        //$city = $xml->data->location->name;
-        //print_r($xml->data);
+
         $data = array();
         foreach ($xml->data as  $location)
         {
 
 
             foreach ($location as $citydata) {
-                //print_r($value);
                 $alldata = array();
                 $data["city"] = (string) $citydata->name;
                 foreach ($citydata->{'weather-elements'} as  $weatherelements) {
                     foreach ($weatherelements as $key => $datarows) {
-                        //echo $key;
                         $data["class"] = $key;
                         foreach ($datarows as  $row) {
-                            //print_r($row);
                             $date=date_create($row->attributes()->start,timezone_open("Asia/Taipei") );
                             $data["start"] = date_format($date,"Y-m-d H:i:s");;
                             $date=date_create($row->attributes()->end,timezone_open("Asia/Taipei"));
                             $data["end"] = date_format($date,"Y-m-d H:i:s");
                             $data["text"] = isset($row->text) ? (string)$row->text:NULL;
                             $data["value"] = (float)$row->value;
-                            //print_r($data);
                             $alldata[]=$data;
-                            //echo "<br>";
+
                         }
                     }
                 }
@@ -145,37 +136,31 @@ class Cli extends CI_Controller {
     }
     public function _get_obs_data($table,$data_url)
     {
-        // $table="obs";
-        // $data_url="DIV2/O-A0003-001.xml";
-        //php /home/fripig/public_html/api/weather/index.php cli get_36hour_data
+
         $url = 'http://opendata.cwb.gov.tw/opendata/'.$data_url;
         $xmlstring = @file_get_contents($url);
         if($xmlstring == FALSE)
             return;
         $xml = simplexml_load_string($xmlstring);
 
-        //$data_url = "MFC/F-C0032-001.xml";
-        //$updatetime = $xml->head->updated;
+
         $updatetime = date_create($xml->sent,timezone_open("Asia/Taipei") );
         $updatetime = date_format($updatetime,"Y-m-d H:i:s");;
         $check = $this->db->like("url",$data_url)
                             //->where("updatetime >=",$updatetime)
                             ->get("data_state",1)
                             ->row_array();
-        //print_r($check);
-        //print_r($updatetime);
+
         if($check)
         {
-            //if($updatetime!==$check["updatetime"])
+
                 $this->db->update("data_state",array("updatetime"=>$updatetime),array("url"=>$data_url));
-            //else
-                //return 0;
+
         }else
         {
             $this->db->insert("data_state",array("updatetime"=>$updatetime,"url"=>$data_url) );
         }
-        //$city = $xml->data->location->name;
-        //print_r($xml->data);
+
         $data = array();
         $data["status"] = (string)$xml->status;
         $data["msgtype"] = (string)$xml->msgType;
@@ -191,21 +176,20 @@ class Cli extends CI_Controller {
                 $data["obsTime"]  =date_create($rows->time->obstime,timezone_open("Asia/Taipei") );
                 $data["obsTime"]  = date_format($data["obsTime"] ,"Y-m-d H:i:s");;
                 foreach ($rows as $key2 => $row) {
-                    //$data["location"] = "POINT(".$row->lat." ".$row->lon.")";
-                    //print_r($row);
+
                     $this->db->set("location","GeomFromText('POINT(".$rows->lat." ".$rows->lon.")')",FALSE);
 
-                    //foreach ($row as $key3 => $value) {
+
 
                         if($key2=="weatherElement")
                             $data[(string)$row->elementName] = is_numeric((string)$row->elementValue->value)? $row->elementValue->value:"'{$row->elementValue->value}'";
                         if($key2=="parameter")
                             $data[(string)$row->parameterName] = is_numeric((string)$row->parameterValue)? $row->parameterValue:"{$row->parameterValue}";
-                    //}
+
                 }
                 
                 $this->db->insert($table,$data);
-               // echo $this->db->last_query();
+
 
 
                 
